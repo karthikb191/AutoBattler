@@ -7,6 +7,7 @@
 #include "Level/LevelGenerator.h"
 #include "Level/Tile.h"
 #include "Character/Creature.h"
+#include "Character/CreatureStatsComponent.h"
 #include "Synchronizer.h"
 
 void UBattleSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -40,46 +41,85 @@ void UBattleSubsystem::SpawnCreatures()
 	const FLevelGenerationInfo& levelInfo = GameSubsystem->GetLevelGenerator()->GetLevelInfo();
 	const TArray<ATile*>& tiles = GameSubsystem->GetLevelGenerator()->GetTiles();
 
-	uint32 randIndex = FMath::RandRange(0, tiles.Num());
+	uint32 randIndex = FMath::RandRange(0, tiles.Num() - 1);
 	FVector spawnPoint(tiles[randIndex]->GetActorLocation());
 	
 	CreatureA = (ACreature*)GetWorld()->SpawnActor<ACreature>(BattleInfo.CreatureA.Get(),
 		FTransform(FQuat::Identity, spawnPoint, FVector::One()), spawnParams);
 	CreatureA->SetCurrentTile(tiles[randIndex]);
 
-	randIndex = FMath::RandRange(0, tiles.Num());
+	randIndex = FMath::RandRange(0, tiles.Num() - 1);
 	spawnPoint = tiles[randIndex]->GetActorLocation();
 	CreatureB = (ACreature*)GetWorld()->SpawnActor<ACreature>(BattleInfo.CreatureB.Get(),
 		FTransform(FQuat::Identity, spawnPoint, FVector::One()), spawnParams);
 	CreatureB->SetCurrentTile(tiles[randIndex]);
 }
 
+void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint32 TimeStep)
+{
+	if (!IsValid(Creature)) return;
+	ACreature* Target = BattleSystem->GetClosestEnemyTo(Creature);
+	if (!IsValid(Target)) return;
+
+	TArray<ATile*> Path = BattleSystem->TraceCreaturePath(Creature, Target);
+
+	float Range = Creature->GetCreatureStatsComponent()->GetAttackRange();
+	float HitDuration = Creature->GetCreatureStatsComponent()->GetAttackDuration();
+	float CooldownDuration = Creature->GetCreatureStatsComponent()->GetCooldownDuration();
+	uint32 LastHitCommand = Creature->GetLastHitCommandTimestamp();
+	if (LastHitCommand + HitDuration < TimeStep)
+	{
+		if (Path.Num() < Range)
+		{
+			//If we are past attack and cool down frames, initiate one more hit on target
+			if (LastHitCommand + HitDuration + CooldownDuration < TimeStep)
+			{
+				Creature->Hit(TimeStep);
+				Target->TakeAHit(Creature->GetCreatureStatsComponent()->GetDamagePerHit());
+
+				if (Target->GetCreatureStatsComponent()->GetHitPointsRemaining() <= 0)
+				{
+					Target->Die(TimeStep);
+				}
+			}
+		}
+		else
+		{
+			Creature->SetTilesToTraverse(Path);
+			for (auto Tile : Path)
+			{
+				DrawDebugSphere(Creature->GetWorld(), Tile->GetActorLocation(), 20.0f, 10, FColor::Blue, false, .1f);
+			}
+			Creature->Move();
+		}
+	}
+}
+
 void UBattleSubsystem::Synchronize(uint32 TimeStep)
 {
-	ACreature* Target = GetClosestEnemyTo(CreatureA);
-	TArray<ATile*> Path = TraceCreaturePath(CreatureA, Target);
-	CreatureA->SetTilesToTraverse(Path);
-	for (auto Tile : Path)
-	{
-		DrawDebugSphere(GetWorld(), Tile->GetActorLocation(), 20.0f, 10, FColor::Blue, false, .1f);
-	}
-
-
-	Target = GetClosestEnemyTo(CreatureB);
-	Path = TraceCreaturePath(CreatureB, Target);
-	CreatureB->SetTilesToTraverse(Path);
-	for (auto Tile : Path)
-	{
-		DrawDebugSphere(GetWorld(), Tile->GetActorLocation(), 25.0f, 10, FColor::Red, false, .1f);
-	}
+	RunBattleLogicOn(this, CreatureA, TimeStep);
+	RunBattleLogicOn(this, CreatureB, TimeStep);
 }
 
 //Movement
 ACreature* UBattleSubsystem::GetClosestEnemyTo(ACreature* Searcher)
 {
 	//TODO: Dirty Hack for now. Remove this one multiple enemies are present
-	if (Searcher == CreatureA) return CreatureB;
-	else return CreatureA;
+	if (!IsValid(Searcher)) return nullptr;
+
+	if (Searcher == CreatureA) {
+		if (IsValid(CreatureB) && !CreatureB->GetIsMarkedForDeath())
+		{
+			return CreatureB;
+		}
+		return nullptr;
+	}
+
+	if (IsValid(CreatureA) && !CreatureA->GetIsMarkedForDeath())
+	{
+		return CreatureA;
+	}
+	return nullptr;
 }
 
 TArray<ATile*> UBattleSubsystem::TraceCreaturePath(ACreature* From, ACreature* To)

@@ -11,6 +11,7 @@ class USceneComponent;
 class UCreatureStatsComponent;
 class ATile;
 
+
 UCLASS()
 class AUTOBATTLER_API ACreature : public AActor
 {
@@ -32,12 +33,22 @@ public:
 	void Move();
 	void Move_Visualize();
 
-	void Hit();
+	/*After initiating Hit, creature cant do anything till it's action frames have expires*/
+	void Hit(uint32 TimeStamp);
 	void Hit_Visualize();
+
+	void Die(uint32 TimeStamp);
+
+	void TakeAHit(float Damage);
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	UCreatureStatsComponent* GetCreatureStatsComponent() { return Stats; }
+	uint32 GetLastHitCommandTimestamp() { return LastHitCommand; }
+	bool GetIsMarkedForDeath() { return bMarkForDeath; }
 private:
+	void Hit_Internal();
+
 	UPROPERTY(EditDefaultsOnly)
 	USceneComponent*			MeshRoot;
 	UPROPERTY(EditDefaultsOnly)
@@ -45,12 +56,16 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	UCreatureStatsComponent*	Stats;
 	
+	FLinearColor				DefColor;
+	FLinearColor				DamageColorModifier	= FLinearColor::White;
+	UMaterialInstanceDynamic*	MeshMaterial;
 	//TODO: Move this to stats
-	UPROPERTY(EditAnywhere)
-	float						tilesPerTimeStamp = 1.0f;
 	float						tilesTraversed = 0.0f;
 
 	TArray<ATile*>				TilesToTraverse;
 	UPROPERTY(Transient)
 	ATile*						CurrentTile;
+
+	uint32						LastHitCommand = 0;
+	bool						bMarkForDeath = false;
 };
