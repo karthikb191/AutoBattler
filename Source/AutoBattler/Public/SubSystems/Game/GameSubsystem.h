@@ -5,10 +5,11 @@
 #include "CoreMinimal.h"
 #include "Templates/UniquePtr.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Data/DALevelGenerator.h"
 #include "GameSubsystem.generated.h"
 
 class ULevelGenerator;
-struct FLevelGenerationInfo;
+class ASynchronizer;
 /**
  * 
  */
@@ -19,11 +20,23 @@ class AUTOBATTLER_API UGameSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
+	UFUNCTION(BlueprintCallable)
 	void InitLevel(const FLevelGenerationInfo& Levelinfo);
-	void GenerateLevel();
+	UFUNCTION(BlueprintCallable)
+	void MakeBattlePreparations();
+
+	UFUNCTION(BlueprintCallable)
+	void BeginBattle();
+	UFUNCTION(BlueprintCallable)
+	void EndBattle();
+	UFUNCTION()
+	void Synchronize(const uint32 timeStamp);
 protected:
 
 private:
 	UPROPERTY(Transient)
 	ULevelGenerator*			LevelGenerator = nullptr;
+
+	UPROPERTY(Transient)
+	ASynchronizer*				Synchronizer = nullptr;
 };

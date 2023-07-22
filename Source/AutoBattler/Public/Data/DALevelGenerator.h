@@ -13,10 +13,10 @@
 /**
  * 
  */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FLevelGenerationInfo
 {
-	GENERATED_BODY()
+	GENERATED_USTRUCT_BODY()
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<ATile>	Tile;

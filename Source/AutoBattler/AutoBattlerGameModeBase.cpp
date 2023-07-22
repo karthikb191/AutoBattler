@@ -16,5 +16,5 @@ void AAutoBattlerGameModeBase::InitGame(const FString& MapName, const FString& O
 void AAutoBattlerGameModeBase::StartPlay()
 {
 	//TODO: Move this to be controlled from UI
-	GameSubsystem->GenerateLevel();
+	GameSubsystem->MakeBattlePreparations();
 }
