@@ -6,12 +6,14 @@
 // Sets default values
 ASynchronizer::ASynchronizer()
 {
- 	PrimaryActorTick.bCanEverTick = false;
+ 	PrimaryActorTick.bCanEverTick = true;
+	SetActorTickEnabled(false);
 }
 
 void ASynchronizer::Reset()
 {
 	CurrentTimeStep = 0;
+	SetActorTickEnabled(false);
 	TickCallback.Clear();
 }
 
@@ -19,7 +21,9 @@ void ASynchronizer::Start()
 {
 	if (bRunning) return;
 
-	PrimaryActorTick.bCanEverTick = true;
+	SetActorTickEnabled(true);
+	SetActorTickInterval(0.1f);
+	
 	//TODO: Hardcoding tick interval for now. Get it from a config file or data asset there are multiple global settings
 	bRunning = true;
 }
@@ -29,7 +33,6 @@ void ASynchronizer::Stop()
 	if (!bRunning) return;
 
 	bRunning = false;
-	PrimaryActorTick.bCanEverTick = false;
 	Reset();
 }
 
@@ -37,7 +40,7 @@ void ASynchronizer::Stop()
 void ASynchronizer::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	SetActorTickEnabled(false);
 }
 
 // Called every frame

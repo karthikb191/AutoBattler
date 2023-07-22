@@ -5,9 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "Data/DALevelGenerator.h"
+#include "Data/DABattleInfo.h"
 #include "AutoBattlerGameModeBase.generated.h"
 
 class UGameSubsystem;
+class UBattleSubsystem;
 /**
  * 
  */
@@ -22,8 +24,12 @@ protected:
 	virtual void StartPlay() override;
 
 	UPROPERTY(EditDefaultsOnly)
-	UDALevelGenerator*			LevelGeneratorData;
+	UDALevelGenerator*			LevelGeneratorData; 
+	UPROPERTY(EditDefaultsOnly)
+	UDABattleInfo*				BattleInfoData;
 
 	UPROPERTY(Transient)
 	UGameSubsystem*				GameSubsystem;
+	UPROPERTY(Transient)
+	UBattleSubsystem*			BattleSubsystem;
 };

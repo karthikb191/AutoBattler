@@ -60,8 +60,16 @@ void ULevelGenerator::GenerateLevel()
 		
 		Tiles[i] = (ATile*)GetWorld()->SpawnActor<ATile>(LevelGenerationInfo.Tile.Get(), transform, spawnParams);
 		Tiles[i]->SetActorLabel(FString::Printf(TEXT("Tile_%d.%d"), i % LevelGenerationInfo.TileCount.X, i / LevelGenerationInfo.TileCount.X));
+		Tiles[i]->SetTileIndex(FIntPoint(i % LevelGenerationInfo.TileCount.X, i / LevelGenerationInfo.TileCount.X));
 		currentX += TileDimensions.X;
 	}
+}
+
+ATile* ULevelGenerator::GetTileFromIndex(int32 X, int32 Y)
+{
+	ensure(X < LevelGenerationInfo.TileCount.X && Y < LevelGenerationInfo.TileCount.Y);
+
+	return Tiles[LevelGenerationInfo.TileCount.X * Y + X];
 }
 
 void ULevelGenerator::DestroyLevel()

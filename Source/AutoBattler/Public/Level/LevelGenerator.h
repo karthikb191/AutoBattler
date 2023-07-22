@@ -27,6 +27,12 @@ public:
 	void GenerateLevel();
 	UFUNCTION()
 	void DestroyLevel();
+	UFUNCTION()
+	const FLevelGenerationInfo& GetLevelInfo() { return LevelGenerationInfo; }
+	UFUNCTION()
+	const TArray<ATile*>& GetTiles() {return Tiles;}
+	UFUNCTION()
+	ATile* GetTileFromIndex(int32 X, int32 Y);
 
 private:
 	UPROPERTY(Transient)

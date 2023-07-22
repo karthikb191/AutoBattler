@@ -31,6 +31,12 @@ public:
 	void EndBattle();
 	UFUNCTION()
 	void Synchronize(const uint32 timeStamp);
+
+	UFUNCTION()
+	ULevelGenerator* GetLevelGenerator() { return LevelGenerator; }
+	UFUNCTION()
+	ASynchronizer* GetSynchronizer() { return Synchronizer; }
+
 protected:
 
 private:

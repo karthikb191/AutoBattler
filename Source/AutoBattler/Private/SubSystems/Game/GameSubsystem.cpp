@@ -20,9 +20,9 @@ void UGameSubsystem::InitLevel(const FLevelGenerationInfo& LevelInfo)
 	LevelGenerator->Initialize(LevelInfo);
 
 	FActorSpawnParameters spawnParams;
-	spawnParams.bNoFail = true;
+	
 	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	Synchronizer = (ASynchronizer*)GetWorld()->SpawnActor<ASynchronizer>(StaticClass(), spawnParams);
+	Synchronizer = (ASynchronizer*)GetWorld()->SpawnActor<ASynchronizer>(ASynchronizer::StaticClass(), spawnParams);
 
 	check(Synchronizer != nullptr);
 }

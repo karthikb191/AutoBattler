@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Math/IntPoint.h"
 #include "Tile.generated.h"
 
 UCLASS()
@@ -22,5 +23,8 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
+	void SetTileIndex(FIntPoint Index) { TileIndex = Index; }
+	const FIntPoint& GetTileIndex() { return TileIndex; }
+private:
+	FIntPoint		TileIndex;
 };
