@@ -12,7 +12,13 @@
 
 FColor DebugSphereColor = FColor::Red;
 //Helper Functions
-void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint32 TimeStep);
+void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, TArray<ACreature*>& OppositeTeam, uint32 TimeStep);
+void PopulateTeam(TArray<ACreature*>& Team, const TArray<TSubclassOf<ACreature>>& CreatureClasses,
+	UBattleSubsystem* BattleSystem, UGameSubsystem* GameSubsystem);
+ACreature* GetClosestEnemyTo(ACreature* Searcher, TArray<ACreature*>& OppositeTeam);
+
+DECLARE_LOG_CATEGORY_EXTERN(BattleSubsystemLogger, Warning, Warning);
+DEFINE_LOG_CATEGORY(BattleSubsystemLogger)
 
 void UBattleSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -34,59 +40,63 @@ void UBattleSubsystem::MakeBattlePreparations()
 	TDelegate<void(uint32)> del;
 	del.BindUObject(this, &UBattleSubsystem::Synchronize);
 	GameSubsystem->GetSynchronizer()->GetTickCallback().Add(del);
+
+	bBattleRunning = true;
+}
+
+void UBattleSubsystem::PostBattleCleanup()
+{
+	BattleFinishedCallback.Clear();
+	for (ACreature* Creature : TeamA)
+	{
+		if (IsValid(Creature))
+		{
+			Creature->Destroy();
+		}
+	}
+	for (ACreature* Creature : TeamB)
+	{
+		if (IsValid(Creature))
+		{
+			Creature->Destroy();
+		}
+	}
+	TeamA.Empty();
+	TeamB.Empty();
 }
 
 void UBattleSubsystem::Synchronize(uint32 TimeStep)
 {
+	if (!bBattleRunning) return;
+
+	if (TeamA.IsEmpty() || TeamB.IsEmpty())
+	{
+		if (BattleFinishedCallback.IsBound())
+		{
+			BattleFinishedCallback.Broadcast();
+			bBattleRunning = false;
+			return;
+		}
+	}
+
 	DebugSphereColor = FColor::Red;
-	RunBattleLogicOn(this, CreatureA, TimeStep);
+	for (ACreature* Creature : TeamA)
+	{
+		RunBattleLogicOn(this, Creature, TeamB, TimeStep);
+	}
 	DebugSphereColor = FColor::Blue;
-	RunBattleLogicOn(this, CreatureB, TimeStep);
+	for (ACreature* Creature : TeamB)
+	{
+		RunBattleLogicOn(this, Creature, TeamA, TimeStep);
+	}
 }
 
 void UBattleSubsystem::SpawnCreatures()
 {
-	FActorSpawnParameters spawnParams;
-	spawnParams.bNoFail = true;
-	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	
-	const FLevelGenerationInfo& levelInfo = GameSubsystem->GetLevelGenerator()->GetLevelInfo();
-	const TArray<ATile*>& tiles = GameSubsystem->GetLevelGenerator()->GetTiles();
-
-	uint32 randIndex = FMath::RandRange(0, tiles.Num() - 1);
-	FVector spawnPoint(tiles[randIndex]->GetActorLocation());
-	
-	CreatureA = (ACreature*)GetWorld()->SpawnActor<ACreature>(BattleInfo.CreatureA.Get(),
-		FTransform(FQuat::Identity, spawnPoint, FVector::One()), spawnParams);
-	CreatureA->SetCurrentTile(tiles[randIndex]);
-
-	randIndex = FMath::RandRange(0, tiles.Num() - 1);
-	spawnPoint = tiles[randIndex]->GetActorLocation();
-	CreatureB = (ACreature*)GetWorld()->SpawnActor<ACreature>(BattleInfo.CreatureB.Get(),
-		FTransform(FQuat::Identity, spawnPoint, FVector::One()), spawnParams);
-	CreatureB->SetCurrentTile(tiles[randIndex]);
+	PopulateTeam(TeamA, BattleInfo.TeamA, this, GameSubsystem);
+	PopulateTeam(TeamB, BattleInfo.TeamB, this, GameSubsystem);
 }
 
-//Movement
-ACreature* UBattleSubsystem::GetClosestEnemyTo(ACreature* Searcher)
-{
-	//TODO: Dirty Hack for now. Remove this one multiple enemies are present
-	if (!IsValid(Searcher)) return nullptr;
-
-	if (Searcher == CreatureA) {
-		if (IsValid(CreatureB) && !CreatureB->GetIsMarkedForDeath())
-		{
-			return CreatureB;
-		}
-		return nullptr;
-	}
-
-	if (IsValid(CreatureA) && !CreatureA->GetIsMarkedForDeath())
-	{
-		return CreatureA;
-	}
-	return nullptr;
-}
 
 TArray<ATile*> UBattleSubsystem::TraceCreaturePath(ACreature* From, ACreature* To)
 {
@@ -121,17 +131,11 @@ TArray<ATile*> UBattleSubsystem::TraceCreaturePath(ACreature* From, ACreature* T
 	return traversePath;
 }
 
-//Battle
-void UBattleSubsystem::Attack()
-{
-
-}
-
 //Helpers
-void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint32 TimeStep)
+void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, TArray<ACreature*>& OppositeTeam, uint32 TimeStep)
 {
 	if (!IsValid(Creature)) return;
-	ACreature* Target = BattleSystem->GetClosestEnemyTo(Creature);
+	ACreature* Target = GetClosestEnemyTo(Creature, OppositeTeam);
 	if (!IsValid(Target)) return;
 
 	TArray<ATile*> Path = BattleSystem->TraceCreaturePath(Creature, Target);
@@ -153,6 +157,7 @@ void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint3
 
 				if (Target->GetCreatureStatsComponent()->GetHitPointsRemaining() <= 0)
 				{
+					OppositeTeam.Remove(Target);
 					Target->Die(TimeStep);
 				}
 			}
@@ -167,4 +172,67 @@ void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint3
 			Creature->Move();
 		}
 	}
+}
+
+void PopulateTeam(TArray<ACreature*>& Team, const TArray<TSubclassOf<ACreature>>& CreatureClasses,
+	UBattleSubsystem* BattleSystem, UGameSubsystem* GameSubsystem)
+{
+	FActorSpawnParameters spawnParams;
+	spawnParams.bNoFail = true;
+	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	const FLevelGenerationInfo& levelInfo = GameSubsystem->GetLevelGenerator()->GetLevelInfo();
+	const TArray<ATile*>& tiles = GameSubsystem->GetLevelGenerator()->GetTiles();
+
+	uint32 randIndex = FMath::RandRange(0, tiles.Num() - 1);
+	FVector spawnPoint(tiles[randIndex]->GetActorLocation());
+
+	TArray<ATile*> OccupiedTiles;
+	for (TSubclassOf<ACreature> CreatureClass : CreatureClasses)
+	{
+		ACreature* Creature = (ACreature*)BattleSystem->GetWorld()->SpawnActor<ACreature>(CreatureClass.Get(),
+			FTransform(FQuat::Identity, spawnPoint, FVector::One()), spawnParams);
+		ATile* Tile = tiles[randIndex];
+
+		int retries = 5;
+		while (OccupiedTiles.Contains(Tile) && retries > 0)
+		{
+			Tile = tiles[FMath::RandRange(0, tiles.Num() - 1)];
+			--retries;
+		}
+
+		if (!OccupiedTiles.Contains(Tile))
+		{
+			Creature->SetCurrentTile(Tile);
+			Team.Push(Creature);
+			OccupiedTiles.Push(Tile);
+		}
+		else
+		{
+			UE_LOG(BattleSubsystemLogger, Warning, TEXT("Could not spawn a creature. There may not be enough free tiles"));
+		}
+	}
+}
+
+ACreature* GetClosestEnemyTo(ACreature* Searcher, TArray<ACreature*>& OppositeTeam)
+{
+	if (!IsValid(Searcher) || OppositeTeam.IsEmpty()) return nullptr;
+
+	FIntPoint Start = Searcher->GetCurrentTile()->GetTileIndex();
+	uint32 sqrDist = TNumericLimits<uint32>::Max();
+	ACreature* Target = nullptr;
+	for (ACreature* Creature : OppositeTeam)
+	{
+		FIntPoint End = Searcher->GetCurrentTile()->GetTileIndex();
+		float dx = End.X - Start.X;
+		float dy = End.Y - Start.Y;
+		float curSqrDist = (dx * dx + dy * dy);
+		if (curSqrDist < sqrDist)
+		{
+			Target = Creature;
+			sqrDist = curSqrDist;
+		}
+	}
+
+	return Target;
 }

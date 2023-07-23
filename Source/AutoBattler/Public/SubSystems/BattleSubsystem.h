@@ -11,6 +11,9 @@ class UGameSubsystem;
 class UCreatureCommander;
 class ACreature;
 class ATile;
+
+DECLARE_MULTICAST_DELEGATE(BattleFinishedDelegate)
+
 /**
  * 
  */
@@ -25,6 +28,7 @@ public:
 	void InitLevel(const FBattleInfo& Info);
 	void MakeBattlePreparations();
 	void Synchronize(uint32 TimeStep);
+	void PostBattleCleanup();
 	//TODO: Retrieve Info from level generator
 	//TODO: Add player director
 
@@ -33,11 +37,10 @@ public:
 	void SpawnCreatures();
 
 	//Movement
-	ACreature* GetClosestEnemyTo(ACreature* Searcher);
+	//ACreature* GetClosestEnemyTo(ACreature* Searcher);
 	TArray<ATile*> TraceCreaturePath(ACreature* From, ACreature* To);
 
-	//Battle
-	void Attack();
+	BattleFinishedDelegate& GetBattleFinishedCallback() { return BattleFinishedCallback; }
 
 private:
 	UPROPERTY(Transient)
@@ -49,7 +52,15 @@ private:
 
 	//TODO: Add multiple enemies
 	UPROPERTY(Transient)
-	ACreature*				CreatureA;
+	TArray<ACreature*>		TeamA;
 	UPROPERTY(Transient)
-	ACreature*				CreatureB;
+	TArray<ACreature*>		TeamB;
+
+	//UPROPERTY(Transient)
+	//ACreature*				CreatureA;
+	//UPROPERTY(Transient)
+	//ACreature*				CreatureB;
+
+	BattleFinishedDelegate	BattleFinishedCallback;
+	bool					bBattleRunning;
 };

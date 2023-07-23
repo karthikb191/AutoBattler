@@ -13,10 +13,14 @@ struct FBattleInfo
 {
 	GENERATED_USTRUCT_BODY()
 
+	//UPROPERTY(EditDefaultsOnly)
+	//TSubclassOf<ACreature>			CreatureA;
+	//UPROPERTY(EditDefaultsOnly)
+	//TSubclassOf<ACreature>			CreatureB;
 	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<ACreature>			CreatureA;
+	TArray<TSubclassOf<ACreature>>	TeamA;
 	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<ACreature>			CreatureB;
+	TArray<TSubclassOf<ACreature>>	TeamB;
 };
 
 UCLASS()

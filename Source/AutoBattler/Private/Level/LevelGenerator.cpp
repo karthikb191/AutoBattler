@@ -82,7 +82,10 @@ void ULevelGenerator::DestroyLevel()
 
 	for (auto tile : Tiles)
 	{
-		tile->Destroy();
+		if (IsValid(tile))
+		{
+			tile->Destroy();
+		}
 	}
 	bRunning = false;
 }
