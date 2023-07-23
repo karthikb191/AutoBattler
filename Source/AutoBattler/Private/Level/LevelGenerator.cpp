@@ -24,11 +24,11 @@ ULevelGenerator::~ULevelGenerator()
 void ULevelGenerator::Initialize(const FLevelGenerationInfo& Info)
 {
 	LevelGenerationInfo = Info;
-	bRunning = true;
 }
 
 void ULevelGenerator::GenerateLevel()
 {
+	bRunning = true;
 	int numItr = LevelGenerationInfo.TileCount.X * LevelGenerationInfo.TileCount.Y;
 	Tiles.SetNum(numItr);
 
@@ -51,7 +51,6 @@ void ULevelGenerator::GenerateLevel()
 			currentX = LevelGenerationInfo.PlatformCenter.X - hX - TileDimensions.X / 2.0f;
 			currentY += TileDimensions.Y;
 		}
-		spawnParams.Name = FName(FString::Printf(TEXT("Tile_%d.%d"), i % LevelGenerationInfo.TileCount.X, i));
 		
 		FTransform transform = FTransform(FQuat::Identity,
 			FVector3d(currentX, currentY, LevelGenerationInfo.PlatformCenter.Z),
@@ -59,7 +58,7 @@ void ULevelGenerator::GenerateLevel()
 		
 		
 		Tiles[i] = (ATile*)GetWorld()->SpawnActor<ATile>(LevelGenerationInfo.Tile.Get(), transform, spawnParams);
-		Tiles[i]->SetActorLabel(FString::Printf(TEXT("Tile_%d.%d"), i % LevelGenerationInfo.TileCount.X, i / LevelGenerationInfo.TileCount.X));
+		Tiles[i]->SetActorLabel(FString::Printf(TEXT("Tile_%d.%d "), i % LevelGenerationInfo.TileCount.X, i / LevelGenerationInfo.TileCount.X));
 		Tiles[i]->SetTileIndex(FIntPoint(i % LevelGenerationInfo.TileCount.X, i / LevelGenerationInfo.TileCount.X));
 		currentX += TileDimensions.X;
 	}
@@ -87,5 +86,6 @@ void ULevelGenerator::DestroyLevel()
 			tile->Destroy();
 		}
 	}
+	Tiles.Empty();
 	bRunning = false;
 }

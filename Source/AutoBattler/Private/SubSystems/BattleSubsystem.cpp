@@ -223,7 +223,7 @@ ACreature* GetClosestEnemyTo(ACreature* Searcher, TArray<ACreature*>& OppositeTe
 	ACreature* Target = nullptr;
 	for (ACreature* Creature : OppositeTeam)
 	{
-		FIntPoint End = Searcher->GetCurrentTile()->GetTileIndex();
+		FIntPoint End = Creature->GetCurrentTile()->GetTileIndex();
 		float dx = End.X - Start.X;
 		float dy = End.Y - Start.Y;
 		float curSqrDist = (dx * dx + dy * dy);

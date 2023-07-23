@@ -37,6 +37,12 @@ void UGameSubsystem::MakeBattlePreparations()
 	Synchronizer->GetTickCallback().Add(del);
 }
 
+void UGameSubsystem::PostBattleCleanup()
+{
+	LevelGenerator->DestroyLevel();
+	Synchronizer->Stop();
+}
+
 void UGameSubsystem::BeginBattle()
 {
 	Synchronizer->Start();

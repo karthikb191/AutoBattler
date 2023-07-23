@@ -24,6 +24,8 @@ public:
 	void InitLevel(const FLevelGenerationInfo& Levelinfo);
 	UFUNCTION(BlueprintCallable)
 	void MakeBattlePreparations();
+	UFUNCTION(BlueprintCallable)
+	void PostBattleCleanup();
 
 	UFUNCTION(BlueprintCallable)
 	void BeginBattle();

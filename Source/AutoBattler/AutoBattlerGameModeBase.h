@@ -23,6 +23,9 @@ protected:
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void StartPlay() override;
 
+	void StartBattle();
+	void HandleBattleFinished();
+
 	UPROPERTY(EditDefaultsOnly)
 	UDALevelGenerator*			LevelGeneratorData; 
 	UPROPERTY(EditDefaultsOnly)
