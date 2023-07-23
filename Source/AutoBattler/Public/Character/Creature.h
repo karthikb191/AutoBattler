@@ -28,10 +28,10 @@ protected:
 public:
 	void SetCurrentTile(ATile* Tile) { CurrentTile = Tile; }
 	ATile* GetCurrentTile() { return CurrentTile; }
-	void SetTilesToTraverse(const TArray<ATile*>& Tiles) { TilesToTraverse = Tiles; }
+	void SetTilesToTraverse(const TArray<ATile*>& Tiles);
 
 	void Move();
-	void Move_Visualize();
+	void Move_Visualize(float DeltaTime);
 
 	/*After initiating Hit, creature cant do anything till it's action frames have expires*/
 	void Hit(uint32 TimeStamp);
@@ -59,8 +59,12 @@ private:
 	FLinearColor				DefColor;
 	FLinearColor				DamageColorModifier	= FLinearColor::White;
 	UMaterialInstanceDynamic*	MeshMaterial;
-	//TODO: Move this to stats
-	float						tilesTraversed = 0.0f;
+
+	
+	float						TotalTravel = 0.0f;
+	float						TotalTravelBeforeMove = 0.0f;
+	float						SpeedRequired = 0.0f;
+	//int							TileIndexInListAfterMoveCmd = -1;
 
 	TArray<ATile*>				TilesToTraverse;
 	UPROPERTY(Transient)

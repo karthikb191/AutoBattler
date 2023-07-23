@@ -10,6 +10,9 @@
 #include "Character/CreatureStatsComponent.h"
 #include "Synchronizer.h"
 
+//Helper Functions
+void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint32 TimeStep);
+
 void UBattleSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	//GameSubsystem = Collection.InitializeDependency<UGameSubsystem>();
@@ -30,6 +33,12 @@ void UBattleSubsystem::MakeBattlePreparations()
 	TDelegate<void(uint32)> del;
 	del.BindUObject(this, &UBattleSubsystem::Synchronize);
 	GameSubsystem->GetSynchronizer()->GetTickCallback().Add(del);
+}
+
+void UBattleSubsystem::Synchronize(uint32 TimeStep)
+{
+	RunBattleLogicOn(this, CreatureA, TimeStep);
+	RunBattleLogicOn(this, CreatureB, TimeStep);
 }
 
 void UBattleSubsystem::SpawnCreatures()
@@ -53,52 +62,6 @@ void UBattleSubsystem::SpawnCreatures()
 	CreatureB = (ACreature*)GetWorld()->SpawnActor<ACreature>(BattleInfo.CreatureB.Get(),
 		FTransform(FQuat::Identity, spawnPoint, FVector::One()), spawnParams);
 	CreatureB->SetCurrentTile(tiles[randIndex]);
-}
-
-void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint32 TimeStep)
-{
-	if (!IsValid(Creature)) return;
-	ACreature* Target = BattleSystem->GetClosestEnemyTo(Creature);
-	if (!IsValid(Target)) return;
-
-	TArray<ATile*> Path = BattleSystem->TraceCreaturePath(Creature, Target);
-
-	float Range = Creature->GetCreatureStatsComponent()->GetAttackRange();
-	float HitDuration = Creature->GetCreatureStatsComponent()->GetAttackDuration();
-	float CooldownDuration = Creature->GetCreatureStatsComponent()->GetCooldownDuration();
-	uint32 LastHitCommand = Creature->GetLastHitCommandTimestamp();
-	if (LastHitCommand + HitDuration < TimeStep)
-	{
-		if (Path.Num() < Range)
-		{
-			//If we are past attack and cool down frames, initiate one more hit on target
-			if (LastHitCommand + HitDuration + CooldownDuration < TimeStep)
-			{
-				Creature->Hit(TimeStep);
-				Target->TakeAHit(Creature->GetCreatureStatsComponent()->GetDamagePerHit());
-
-				if (Target->GetCreatureStatsComponent()->GetHitPointsRemaining() <= 0)
-				{
-					Target->Die(TimeStep);
-				}
-			}
-		}
-		else
-		{
-			Creature->SetTilesToTraverse(Path);
-			for (auto Tile : Path)
-			{
-				DrawDebugSphere(Creature->GetWorld(), Tile->GetActorLocation(), 20.0f, 10, FColor::Blue, false, .1f);
-			}
-			Creature->Move();
-		}
-	}
-}
-
-void UBattleSubsystem::Synchronize(uint32 TimeStep)
-{
-	RunBattleLogicOn(this, CreatureA, TimeStep);
-	RunBattleLogicOn(this, CreatureB, TimeStep);
 }
 
 //Movement
@@ -130,6 +93,8 @@ TArray<ATile*> UBattleSubsystem::TraceCreaturePath(ACreature* From, ACreature* T
 	FIntPoint End = To->GetCurrentTile()->GetTileIndex();
 	
 	if (Start == End) return traversePath;
+
+	traversePath.Push(From->GetCurrentTile());
 	
 	FVector2D Current = Start;
 	int dx = End.X - Start.X;
@@ -155,4 +120,45 @@ TArray<ATile*> UBattleSubsystem::TraceCreaturePath(ACreature* From, ACreature* T
 void UBattleSubsystem::Attack()
 {
 
+}
+
+//Helpers
+void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint32 TimeStep)
+{
+	if (!IsValid(Creature)) return;
+	ACreature* Target = BattleSystem->GetClosestEnemyTo(Creature);
+	if (!IsValid(Target)) return;
+
+	TArray<ATile*> Path = BattleSystem->TraceCreaturePath(Creature, Target);
+
+	float Range = Creature->GetCreatureStatsComponent()->GetAttackRange();
+	float HitDuration = Creature->GetCreatureStatsComponent()->GetAttackDuration();
+	float CooldownDuration = Creature->GetCreatureStatsComponent()->GetCooldownDuration();
+	uint32 LastHitCommand = Creature->GetLastHitCommandTimestamp();
+	if (LastHitCommand + HitDuration < TimeStep)
+	{
+		if (Path.Num() <= Range)
+		{
+			//If we are past attack and cool down frames, initiate one more hit on target
+			if (LastHitCommand + HitDuration + CooldownDuration < TimeStep)
+			{
+				Creature->Hit(TimeStep);
+				Target->TakeAHit(Creature->GetCreatureStatsComponent()->GetDamagePerHit());
+
+				if (Target->GetCreatureStatsComponent()->GetHitPointsRemaining() <= 0)
+				{
+					Target->Die(TimeStep);
+				}
+			}
+		}
+		else
+		{
+			Creature->SetTilesToTraverse(Path);
+			for (auto Tile : Path)
+			{
+				DrawDebugSphere(Creature->GetWorld(), Tile->GetActorLocation(), 20.0f, 10, FColor::Blue, false, .15f);
+			}
+			Creature->Move();
+		}
+	}
 }

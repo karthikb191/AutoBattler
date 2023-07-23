@@ -19,7 +19,6 @@ ACreature::ACreature()
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(MeshRoot);
 	Stats = CreateDefaultSubobject<UCreatureStatsComponent>(TEXT("Stats"));
-	//Stats->SetupAttachment(MeshRoot);
 }
 
 // Called when the game starts or when spawned
@@ -37,20 +36,62 @@ void ACreature::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	Move_Visualize(DeltaTime);
 	Hit_Visualize();
+}
+
+void ACreature::SetTilesToTraverse(const TArray<ATile*>& Tiles)
+{
+	bool bAddNewTiles = false;
+	int NumTiles = FMath::Min(TilesToTraverse.Num(), Tiles.Num());
+	for (int i = 0; i < NumTiles; i++)
+	{
+		if (TilesToTraverse[i] != Tiles[i])
+		{
+			bAddNewTiles = true;
+			break;
+		}
+	}
+	
+	if (TilesToTraverse.Num() != Tiles.Num())
+	{
+		bAddNewTiles = true;
+	}
+	
+	if (bAddNewTiles)
+	{
+		//If out initial tile didnt change from previous time step, don't reset Travel params
+		if (TilesToTraverse.Num() > 1 && Tiles.Num() > 1)
+		{
+			if (TilesToTraverse[0] != Tiles[0])
+			{
+				TotalTravel = 0.f;
+				TotalTravelBeforeMove = 0.f;
+			}
+		}
+		else
+		{
+			TotalTravel = 0.f;
+			TotalTravelBeforeMove = 0.f;
+		}
+		TilesToTraverse = Tiles;
+	}
 }
 
 void ACreature::Move()
 {
 	if (TilesToTraverse.Num() == 0) return;
 
-	int32 prevTraversal = FMath::Floor(tilesTraversed);
-	tilesTraversed += GetCreatureStatsComponent()->GetTilesTraversedPerTimeStamp();
+	int32 prevTraversal = FMath::Floor(TotalTravel);
+	TotalTravelBeforeMove = TotalTravel;
+	TotalTravel += GetCreatureStatsComponent()->GetTilesTraversedPerTimeStamp();
 	
-	int32 postTraverasal = FMath::Floor(tilesTraversed);
+	SpeedRequired = (TotalTravel - TotalTravelBeforeMove) / 0.1f;
+	
+	int32 postTraverasal = FMath::Floor(TotalTravel);
 	if (postTraverasal > prevTraversal)
 	{
-		if (postTraverasal > TilesToTraverse.Num())
+		if (postTraverasal >= TilesToTraverse.Num())
 		{
 			CurrentTile = TilesToTraverse[TilesToTraverse.Num() - 1];
 		}
@@ -59,14 +100,35 @@ void ACreature::Move()
 			CurrentTile = TilesToTraverse[postTraverasal];
 		}
 	}
-
-	//TODO: Remove this once move visualization logic is in place
-	SetActorLocation(CurrentTile->GetActorLocation());
 }
 
-void ACreature::Move_Visualize()
+void ACreature::Move_Visualize(float DeltaTime)
 {
+	if (TotalTravelBeforeMove >= TotalTravel) return;
 
+	TotalTravelBeforeMove += SpeedRequired * DeltaTime;
+	if (TotalTravelBeforeMove >= TotalTravel)
+	{
+		return;
+	}
+
+	int PrevTileIndex = FMath::Floor(TotalTravelBeforeMove);
+	int NextTileIndex = FMath::CeilToInt(TotalTravelBeforeMove);
+
+	if (NextTileIndex >= TilesToTraverse.Num())
+	{
+		SetActorLocation(CurrentTile->GetActorLocation());
+		return;
+	}
+
+	float lerpFactor = TotalTravelBeforeMove < 1.f ? 
+		TotalTravelBeforeMove : 
+		FMath::Fmod(TotalTravelBeforeMove, FMath::Floor(TotalTravelBeforeMove));
+
+	FVector resLocation = FMath::Lerp(TilesToTraverse[PrevTileIndex]->GetActorLocation(),
+		TilesToTraverse[NextTileIndex]->GetActorLocation(), lerpFactor);
+
+	SetActorLocation(resLocation);
 }
 
 void ACreature::Hit(uint32 TimeStamp)
@@ -78,7 +140,7 @@ void ACreature::Hit(uint32 TimeStamp)
 }
 void ACreature::Hit_Visualize()
 {
-	DamageColorModifier = FMath::Lerp(DamageColorModifier, FLinearColor::White, 0.1f);
+	DamageColorModifier = FMath::Lerp(DamageColorModifier, FLinearColor::White, 0.05f);
 	MeshMaterial->SetVectorParameterValue("Color", DamageColorModifier * DefColor);
 }
 
