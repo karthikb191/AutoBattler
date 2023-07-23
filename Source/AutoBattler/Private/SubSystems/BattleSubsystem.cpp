@@ -10,6 +10,7 @@
 #include "Character/CreatureStatsComponent.h"
 #include "Synchronizer.h"
 
+FColor DebugSphereColor = FColor::Red;
 //Helper Functions
 void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint32 TimeStep);
 
@@ -37,7 +38,9 @@ void UBattleSubsystem::MakeBattlePreparations()
 
 void UBattleSubsystem::Synchronize(uint32 TimeStep)
 {
+	DebugSphereColor = FColor::Red;
 	RunBattleLogicOn(this, CreatureA, TimeStep);
+	DebugSphereColor = FColor::Blue;
 	RunBattleLogicOn(this, CreatureB, TimeStep);
 }
 
@@ -104,12 +107,14 @@ TArray<ATile*> UBattleSubsystem::TraceCreaturePath(ACreature* From, ACreature* T
 	float xInc = (float)dx / (float)numItr;
 	float yInc = (float)dy / (float)numItr;
 
-	for(int i = 0; i < numItr - 1; i++)
+	float epsilon = 0.000001f;
+	for(int i = 0; i < numItr; i++)
 	{
-		Current.X = Current.X + xInc;
-		Current.Y = Current.Y + yInc;
+		Current.X = Current.X + xInc + epsilon;
+		Current.Y = Current.Y + yInc + epsilon;
 
 		ATile* Tile = GameSubsystem->GetLevelGenerator()->GetTileFromIndex(FMath::Floor(Current.X), FMath::Floor(Current.Y));
+		//if(Tile->GetTileIndex() != End)
 		traversePath.Push(Tile);
 	}
 
@@ -137,11 +142,12 @@ void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint3
 	uint32 LastHitCommand = Creature->GetLastHitCommandTimestamp();
 	if (LastHitCommand + HitDuration < TimeStep)
 	{
-		if (Path.Num() <= Range)
+		if (Path.Num() - 1 <= Range)
 		{
 			//If we are past attack and cool down frames, initiate one more hit on target
 			if (LastHitCommand + HitDuration + CooldownDuration < TimeStep)
 			{
+				Creature->Stop();
 				Creature->Hit(TimeStep);
 				Target->TakeAHit(Creature->GetCreatureStatsComponent()->GetDamagePerHit());
 
@@ -156,7 +162,7 @@ void RunBattleLogicOn(UBattleSubsystem* BattleSystem, ACreature* Creature, uint3
 			Creature->SetTilesToTraverse(Path);
 			for (auto Tile : Path)
 			{
-				DrawDebugSphere(Creature->GetWorld(), Tile->GetActorLocation(), 20.0f, 10, FColor::Blue, false, .15f);
+				DrawDebugSphere(Creature->GetWorld(), Tile->GetActorLocation(), 20.0f, 10, DebugSphereColor, false, .15f);
 			}
 			Creature->Move();
 		}

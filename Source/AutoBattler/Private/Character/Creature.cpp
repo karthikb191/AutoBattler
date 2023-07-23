@@ -86,12 +86,12 @@ void ACreature::Move()
 	TotalTravelBeforeMove = TotalTravel;
 	TotalTravel += GetCreatureStatsComponent()->GetTilesTraversedPerTimeStamp();
 	
-	SpeedRequired = (TotalTravel - TotalTravelBeforeMove) / 0.1f;
+	SpeedRequired = (TotalTravel - TotalTravelBeforeMove) / 0.1f; //TODO: Replace with timestamp interval
 	
 	int32 postTraverasal = FMath::Floor(TotalTravel);
 	if (postTraverasal > prevTraversal)
 	{
-		if (postTraverasal >= TilesToTraverse.Num())
+		if (postTraverasal >= TilesToTraverse.Num() - 1)
 		{
 			CurrentTile = TilesToTraverse[TilesToTraverse.Num() - 1];
 		}
@@ -138,6 +138,15 @@ void ACreature::Hit(uint32 TimeStamp)
 		FColor::Green, 
 		FString::Printf(TEXT("%s dealt %f damage"), *GetActorLabel(), Stats->GetDamagePerHit()));
 }
+
+void ACreature::Stop()
+{
+	SetActorLocation(CurrentTile->GetActorLocation());
+	TotalTravel = 0.f;
+	TotalTravelBeforeMove = 0.f;
+	TilesToTraverse.Empty();
+}
+
 void ACreature::Hit_Visualize()
 {
 	DamageColorModifier = FMath::Lerp(DamageColorModifier, FLinearColor::White, 0.05f);

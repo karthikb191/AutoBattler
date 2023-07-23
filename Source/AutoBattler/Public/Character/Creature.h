@@ -31,6 +31,7 @@ public:
 	void SetTilesToTraverse(const TArray<ATile*>& Tiles);
 
 	void Move();
+	void Stop();
 	void Move_Visualize(float DeltaTime);
 
 	/*After initiating Hit, creature cant do anything till it's action frames have expires*/
