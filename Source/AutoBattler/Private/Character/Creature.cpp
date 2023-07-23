@@ -6,7 +6,8 @@
 #include "Components/SceneComponent.h"
 #include "Level/Tile.h"
 #include "Character/CreatureStatsComponent.h"
-
+#include "Kismet/GameplayStatics.h"
+#include "../AutoBattlerGameModeBase.h"
 // Sets default values
 
 ACreature::ACreature()
@@ -86,7 +87,10 @@ void ACreature::Move()
 	TotalTravelBeforeMove = TotalTravel;
 	TotalTravel += GetCreatureStatsComponent()->GetTilesTraversedPerTimeStamp();
 	
-	SpeedRequired = (TotalTravel - TotalTravelBeforeMove) / 0.1f; //TODO: Replace with timestamp interval
+	//Probably a very very bad thing to do
+	AAutoBattlerGameModeBase* GameMode = Cast<AAutoBattlerGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+
+	SpeedRequired = (TotalTravel - TotalTravelBeforeMove) / GameMode->GetSimulationRate(); //TODO: Replace with timestamp interval
 	
 	int32 postTraverasal = FMath::Floor(TotalTravel);
 	if (postTraverasal > prevTraversal)
@@ -134,9 +138,11 @@ void ACreature::Move_Visualize(float DeltaTime)
 void ACreature::Hit(uint32 TimeStamp)
 {
 	LastHitCommand = TimeStamp;
+#if WITH_EDITOR
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, 
 		FColor::Green, 
 		FString::Printf(TEXT("%s dealt %f damage"), *GetActorLabel(), Stats->GetDamagePerHit()));
+#endif
 }
 
 void ACreature::Stop()
@@ -157,18 +163,23 @@ void ACreature::Die(uint32 TimeStamp)
 {
 	bMarkForDeath = true;
 	//TODO: Add some kind of animation to signal death
+#if WITH_EDITOR
 	GEngine->AddOnScreenDebugMessage(-1, 5.f,
 		FColor::Red,
 		FString::Printf(TEXT("%s is Dead!"), *GetActorLabel()));
+#endif
 	Destroy();
 }
 
 void ACreature::TakeAHit(float Damage)
 {
 	Stats->TakeDamage(Damage);
+
+#if WITH_EDITOR
 	GEngine->AddOnScreenDebugMessage(-1, 5.f,
 		FColor::Yellow,
 		FString::Printf(TEXT("%s took %f damage. Remaining: %f"), *GetActorLabel(), Damage, Stats->GetHitPointsRemaining()));
+#endif
 
 	DamageColorModifier = FLinearColor::Black;
 }

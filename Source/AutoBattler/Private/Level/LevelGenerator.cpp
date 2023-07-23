@@ -56,10 +56,12 @@ void ULevelGenerator::GenerateLevel()
 			FVector3d(currentX, currentY, LevelGenerationInfo.PlatformCenter.Z),
 			FVector3d(LevelGenerationInfo.TileDimensions.X, TileDimensions.Y, 1.0f));
 		
-		
 		Tiles[i] = (ATile*)GetWorld()->SpawnActor<ATile>(LevelGenerationInfo.Tile.Get(), transform, spawnParams);
-		Tiles[i]->SetActorLabel(FString::Printf(TEXT("Tile_%d.%d "), i % LevelGenerationInfo.TileCount.X, i / LevelGenerationInfo.TileCount.X));
 		Tiles[i]->SetTileIndex(FIntPoint(i % LevelGenerationInfo.TileCount.X, i / LevelGenerationInfo.TileCount.X));
+
+#if WITH_EDITOR
+		Tiles[i]->SetActorLabel(FString::Printf(TEXT("Tile_%d.%d "), i % LevelGenerationInfo.TileCount.X, i / LevelGenerationInfo.TileCount.X));
+#endif
 		currentX += TileDimensions.X;
 	}
 }

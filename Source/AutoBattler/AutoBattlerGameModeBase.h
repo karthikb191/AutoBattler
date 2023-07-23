@@ -18,6 +18,9 @@ class AUTOBATTLER_API AAutoBattlerGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
 	
+
+public:
+	float GetSimulationRate() { return SimulationRate; }
 protected:
 
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
@@ -35,4 +38,8 @@ protected:
 	UGameSubsystem*				GameSubsystem;
 	UPROPERTY(Transient)
 	UBattleSubsystem*			BattleSubsystem;
+
+	/*This specified how often synchronizer ticks*/
+	UPROPERTY(EditDefaultsOnly)
+	float						SimulationRate = 0.1f;
 };

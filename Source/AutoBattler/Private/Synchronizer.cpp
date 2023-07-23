@@ -2,6 +2,8 @@
 
 
 #include "Synchronizer.h"
+#include "Kismet/GameplayStatics.h"
+#include "../AutoBattlerGameModeBase.h"
 
 // Sets default values
 ASynchronizer::ASynchronizer()
@@ -22,10 +24,14 @@ void ASynchronizer::Start()
 	if (bRunning) return;
 
 	SetActorTickEnabled(true);
-	SetActorTickInterval(0.1f);
+
+	AAutoBattlerGameModeBase* GameMode = Cast<AAutoBattlerGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (IsValid(GameMode))
+	{
+		SetActorTickInterval(GameMode->GetSimulationRate());
+		bRunning = true;
+	}
 	
-	//TODO: Hardcoding tick interval for now. Get it from a config file or data asset there are multiple global settings
-	bRunning = true;
 }
 
 void ASynchronizer::Stop()
